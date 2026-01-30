@@ -52,14 +52,14 @@ class StaticTrainer(BaseTrainer):
         self.coord_mode = 'vx' if is_variable_coords else 'fx'
         print(f"Detected coordinate mode: {self.coord_mode}")
         
-        latent_queries = self.data_processor.generate_latent_queries(
-            self.model_config.latent_tokens_size
+        coord_sample = data_splits['train']['x']
+        self.coord_dim = coord_sample.shape[-1]
+
+        latent_queries = self.data_processor.generate_latent_queries_coords(
+            self.model_config.latent_tokens_size, coord_sample
         )
         self.latent_tokens_coord = latent_queries
         
-        coord_sample = (data_splits['train']['x'] if is_variable_coords 
-                       else data_splits['train']['x'])
-        self.coord_dim = coord_sample.shape[-1]
         
         c_sample = data_splits['train']['c']
         u_sample = data_splits['train']['u']

@@ -319,6 +319,26 @@ class DataProcessor:
         latent_queries = self.coord_scaler(latent_queries)
         
         return latent_queries
+
+    def generate_latent_queries_coords(
+        self, token_size: Tuple[int, ...], coord_sample
+    ) -> torch.Tensor:
+        """Generate latent query points on a regular grid."""
+
+        ntokens = np.prod(token_size)
+        coords_flattened = coord_sample.flatten(start_dim=0, end_dim=1)
+        perm = torch.randperm(coords_flattened.shape[0])
+        idx = perm[:ntokens]
+        latent_queries = coords_flattened[idx, :]
+
+        if self.coord_scaler is None:
+            self.coord_scaler = CoordinateScaler(
+                target_range=(-1, 1), mode=self.dataset_config.coord_scaling
+            )
+
+        latent_queries = self.coord_scaler(latent_queries)
+
+        return latent_queries
     
     def create_data_loaders(self, data_splits: Dict, is_variable_coords: bool, 
                            latent_queries: Optional[torch.Tensor] = None,
