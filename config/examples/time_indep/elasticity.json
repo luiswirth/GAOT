@@ -8,10 +8,12 @@
         "test": false,
         "ckpt": false
     },
-
     "model": {
         "name": "goat",
-        "latent_tokens_size": [64, 64],
+        "latent_tokens_size": [
+            64,
+            64
+        ],
         "args": {
             "magno": {
                 "coord_dim": 2,
@@ -26,7 +28,6 @@
             }
         }
     },
-
     "dataset": {
         "name": "Elasticity",
         "metaname": "elliptic_pdes/Elasticity",
@@ -38,13 +39,12 @@
         "num_workers": 4,
         "shuffle": true
     },
-
     "optimizer": {
         "name": "adamw",
         "args": {
             "lr": 8e-4,
             "weight_decay": 1e-05,
-            "epoch": 1000,
+            "epoch": 50,
             "loss_scale": 1.0,
             "eval_every_eps": 2,
             "scheduler": "mix",
@@ -53,7 +53,6 @@
             "final_lr": 5e-5
         }
     },
-
     "path": {
         "ckpt_path": ".ckpt/examples/time_indep/elasticity.pt",
         "loss_path": ".loss/examples/time_indep/elasticity.png",
