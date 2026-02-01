@@ -11,8 +11,8 @@
     "model": {
         "name": "goat",
         "latent_tokens_size": [
-            64,
-            64
+            16,
+            16
         ],
         "args": {
             "magno": {
@@ -20,7 +20,9 @@
                 "radius": 0.033,
                 "hidden_size": 64,
                 "mlp_layers": 3,
-                "lifting_channels": 64
+                "lifting_channels": 64,
+                "neighbor_search_method": "native",
+                "precompute_edges": true
             },
             "transformer": {
                 "patch_size": 2,

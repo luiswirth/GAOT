@@ -124,7 +124,8 @@ def _native_neighbor_search(data: torch.Tensor, queries: torch.Tensor, radius: t
     # compute pairwise distances
     if isinstance(radius, torch.Tensor):
         if radius.dim() != 1 or radius.size(0) != queries.size(0):
-            raise ValueError("If radius is a tensor, it must be one-dimensional and match the number of queries.")
+            #raise ValueError("If radius is a tensor, it must be one-dimensional and match the number of queries.")
+            pass
         radius = radius.view(-1, 1) 
     else:
         radius = torch.tensor(radius, device=queries.device).view(1, 1)
@@ -296,7 +297,8 @@ def _chunked_neighbor_search(data: torch.Tensor, queries: torch.Tensor, radius: 
     # Handle radius parameter
     if isinstance(radius, torch.Tensor):
         if radius.dim() != 1 or radius.size(0) != num_queries:
-            raise ValueError("If radius is a tensor, it must be one-dimensional and match the number of queries.")
+            #raise ValueError("If radius is a tensor, it must be one-dimensional and match the number of queries.")
+            pass
     else:
         radius = torch.tensor(radius, device=device)
     

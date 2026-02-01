@@ -9,6 +9,33 @@ from typing import List, Tuple, Optional
 from ..model.layers.utils.neighbor_search import NeighborSearch
 from ..utils.scaling import rescale
 
+def compute_delaunay_radii(tokens: torch.Tensor, physical_points: torch.Tensor, alpha: float = 1.5):
+    import numpy as np
+    from scipy.spatial import Delaunay
+
+    tokens_np = tokens.cpu().numpy()
+    phys_np = physical_points.cpu().numpy()
+    
+    tri = Delaunay(tokens_np)
+    indptr, indices = tri.vertex_neighbor_vertices
+    
+    encoder_radii = np.zeros(len(tokens_np))
+    for i in range(len(tokens_np)):
+        neighbors = indices[indptr[i]:indptr[i+1]]
+        dists = np.linalg.norm(tokens_np[neighbors] - tokens_np[i], axis=1)
+        encoder_radii[i] = dists.max() if len(dists) > 0 else 0.1 # Fallback radius
+
+    encoder_radii *= alpha 
+
+    
+    simplex_indices = tri.find_simplex(phys_np)
+    simplices = tri.simplices[simplex_indices]
+    
+    radii_triplets = encoder_radii[simplices] 
+    radii_triplets[simplex_indices == -1] = encoder_radii.max() # Fallback for out-of-bounds
+    decoder_radii = np.max(radii_triplets, axis=1)
+
+    return torch.tensor(encoder_radii).float(), torch.tensor(decoder_radii).float()
 
 class GraphBuilder:
     """
@@ -41,7 +68,26 @@ class GraphBuilder:
         """
         print(f"Building graphs for {len(x_data)} samples...")
         start_time = time.time()
+
+
+        import numpy as np
+        from scipy.spatial import Delaunay
         
+        tokens_np = latent_queries.cpu().numpy()
+        tri = Delaunay(tokens_np)
+        indptr, indices = tri.vertex_neighbor_vertices
+        
+        # encoder radii
+        alpha = 1.5
+        encoder_radii_np = np.zeros(len(tokens_np))
+        indptr, indices = tri.vertex_neighbor_vertices 
+        for i in range(len(tokens_np)):
+            neighbors = indices[indptr[i]:indptr[i+1]]
+            dists = np.linalg.norm(tokens_np[neighbors] - tokens_np[i], axis=1)
+            encoder_radii_np[i] = dists.max() if len(dists) > 0 else 0.1
+        encoder_radii_np *= alpha
+        encoder_radii = torch.from_numpy(encoder_radii_np).float()
+
         encoder_graphs = []
         decoder_graphs = []
         
@@ -56,13 +102,25 @@ class GraphBuilder:
             else:
                 raise ValueError(f"Unexpected coordinate shape: {x_sample.shape}")
             
+
             # Rescale coordinates to [-1, 1] range
             x_coord_scaled = rescale(x_coord, (-1, 1))
-            
+    
+            # decoder radii
+            phys_np = x_coord_scaled.cpu().numpy()
+            simplex_indices = tri.find_simplex(phys_np)
+            valid_mask = simplex_indices != -1
+            decoder_radii_np = np.full(len(phys_np), encoder_radii_np.max())
+            if np.any(valid_mask):
+                valid_simplices = tri.simplices[simplex_indices[valid_mask]]
+                radii_triplets = encoder_radii_np[valid_simplices]
+                decoder_radii_np[valid_mask] = np.max(radii_triplets, axis=1)
+            decoder_radii = torch.from_numpy(decoder_radii_np).float()
+
             # Build encoder graphs (physical -> latent)
             encoder_nbrs_sample = []
             for scale in scales:
-                scaled_radius = gno_radius * scale
+                scaled_radius = encoder_radii * scale
                 with torch.no_grad():
                     nbrs = self.nb_search(x_coord_scaled, latent_queries, scaled_radius)
                 encoder_nbrs_sample.append(nbrs)
@@ -71,7 +129,7 @@ class GraphBuilder:
             # Build decoder graphs (latent -> physical)
             decoder_nbrs_sample = []
             for scale in scales:
-                scaled_radius = gno_radius * scale
+                scaled_radius = decoder_radii * scale
                 with torch.no_grad():
                     nbrs = self.nb_search(latent_queries, x_coord_scaled, scaled_radius)
                 decoder_nbrs_sample.append(nbrs)
