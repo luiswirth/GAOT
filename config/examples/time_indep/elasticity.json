@@ -17,7 +17,7 @@
         "args": {
             "magno": {
                 "coord_dim": 2,
-                "radius": 0.033,
+                "radius": 0.132,
                 "hidden_size": 64,
                 "mlp_layers": 3,
                 "lifting_channels": 64,

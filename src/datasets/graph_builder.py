@@ -9,34 +9,6 @@ from typing import List, Tuple, Optional
 from ..model.layers.utils.neighbor_search import NeighborSearch
 from ..utils.scaling import rescale
 
-def compute_delaunay_radii(tokens: torch.Tensor, physical_points: torch.Tensor, alpha: float = 1.5):
-    import numpy as np
-    from scipy.spatial import Delaunay
-
-    tokens_np = tokens.cpu().numpy()
-    phys_np = physical_points.cpu().numpy()
-    
-    tri = Delaunay(tokens_np)
-    indptr, indices = tri.vertex_neighbor_vertices
-    
-    encoder_radii = np.zeros(len(tokens_np))
-    for i in range(len(tokens_np)):
-        neighbors = indices[indptr[i]:indptr[i+1]]
-        dists = np.linalg.norm(tokens_np[neighbors] - tokens_np[i], axis=1)
-        encoder_radii[i] = dists.max() if len(dists) > 0 else 0.1 # Fallback radius
-
-    encoder_radii *= alpha 
-
-    
-    simplex_indices = tri.find_simplex(phys_np)
-    simplices = tri.simplices[simplex_indices]
-    
-    radii_triplets = encoder_radii[simplices] 
-    radii_triplets[simplex_indices == -1] = encoder_radii.max() # Fallback for out-of-bounds
-    decoder_radii = np.max(radii_triplets, axis=1)
-
-    return torch.tensor(encoder_radii).float(), torch.tensor(decoder_radii).float()
-
 class GraphBuilder:
     """
     Builds encoder and decoder graphs for variable coordinate datasets.
